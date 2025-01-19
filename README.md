@@ -1,4 +1,4 @@
-# **Bot for Data Lookup & Leak Detection**  
+# **Bot for Data Lookup & Leak Detection**  Оригинальный бот: @theFatR4t_bot
 *Created for educational purposes, so I am not responsible for its use.*
 
 Этот бот был разработан для выполнения быстрых и эффективных поисков по различным типам данных, таким как:
