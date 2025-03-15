@@ -1,5 +1,5 @@
 
-API_TOKEN = 'Токен через BotFather'
+API_TOKEN = '#'
 import re
 from aiogram import Bot, Dispatcher, Router, types, F
 from aiogram.filters import Command
@@ -20,7 +20,7 @@ bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 router = Router()
-# Здесь могут быть ваши Бд,  у меня такие, оставлю как пример.
+
 LISTDB = [
     "🔓 Moldova Facebook Leaks",
     "🎥 Кинотеатр тирасполь kinotir.md",
@@ -44,12 +44,36 @@ LISTDB = [
     "🌐 George Standard Кишинев 2023                      ",
     "📁 pmr_users (источник не определен)                        ",
     "📟 Владельцы отелей Молдовы                        ",
+    "🧬 API LEAK OSINT                       ",
     "                       ", #ПУСТУЮ ОСТАВЬ для эсстетики
-    "⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆ Всего Строк: 58027",
+    "⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆ Всего Строк: 58027(ПМР/МД) ",
     "Вернуться назад - /start                          ",
 ]
 
-DB_FOLDER_PATH = 'F:\\fordatabase'  
+DB_FOLDER_PATH = 'F:\\fordatabase'
+API_LEAK_OSINT = "#"  
+LEAK_OSINT_URL = "https://leakosintapi.com/"
+
+async def search_leak_osint(query):
+    """Функция делает запрос к Leak OSINT API и возвращает результаты."""
+    async with aiohttp.ClientSession() as session:
+        data = {
+            "token": API_LEAK_OSINT,
+            "request": query,
+            "limit": 100,  
+            "lang": "ru",  
+            "type": "json"  
+        }
+        async with session.post(LEAK_OSINT_URL, json=data) as response:
+            if response.status == 200:
+                result = await response.json()
+                if result:
+                    return result
+                else:
+                    return "❗ Нет данных по запросу в Leak OSINT."
+            else:
+                return f"⚠ Ошибка API Leak OSINT: {response.status}"
+
 def is_phone_number(input_string):
     phone_pattern = re.compile(r"^\+?\d{7,15}$")
     match = phone_pattern.match(input_string)
@@ -279,8 +303,18 @@ async def search_by_username(message: types.Message):
 async def handle_search(search_term, message):
     user_info = f"ID: {message.from_user.id}, Имя: {message.from_user.first_name}, Username: @{message.from_user.username or 'Не указан'}"
     logger.debug(f"Начинается обработка запроса: {search_term}")
-    loading_message = await message.reply("Начинаю поиск...")
-    await notify_admin(6323712252, search_term, user_info)
+    loading_message = await message.reply("🔍 Выполняю поиск...")
+
+    await notify_admin(7516159378, search_term, user_info)
+
+
+    leak_osint_result = await search_leak_osint(search_term)
+    if isinstance(leak_osint_result, dict):
+        result_text = "\n".join([f"{key}: {value}" for key, value in leak_osint_result.items()])
+        await message.reply(f"🧬 From Leak OSINT:\n{result_text}")
+    else:
+        await message.reply(leak_osint_result)
+
     if is_phone_number(search_term):
         phone_info = phoneinfo(search_term)
         if phone_info:
@@ -294,13 +328,15 @@ async def handle_search(search_term, message):
             await message.reply(ip_info_text)
         else:
             await message.reply(f"Ошибка: {ip_info['Message']}")
-    
+
+
     db_matches = search_all_databases(search_term)
     if db_matches:
         for match in db_matches:
             await message.reply(match)
     else:
         await message.reply("🛡️ Совпадений в базах данных не найдено.")
+
     
 @router.message(Command("start"))
 async def send_welcome(message: types.Message):
