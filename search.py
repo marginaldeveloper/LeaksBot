@@ -55,7 +55,6 @@ API_LEAK_OSINT = "#"
 LEAK_OSINT_URL = "https://leakosintapi.com/"
 
 async def search_leak_osint(query):
-    """Функция делает запрос к Leak OSINT API и возвращает результаты."""
     async with aiohttp.ClientSession() as session:
         data = {
             "token": API_LEAK_OSINT,
@@ -64,15 +63,31 @@ async def search_leak_osint(query):
             "lang": "ru",  
             "type": "json"  
         }
-        async with session.post(LEAK_OSINT_URL, json=data) as response:
-            if response.status == 200:
-                result = await response.json()
-                if result:
-                    return result
+        try:
+            async with session.post(LEAK_OSINT_URL, json=data) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    if result:
+                        return format_osint_results(result)
+                    else:
+                        return ["❗ Нет данных по запросу в Leak OSINT."]
                 else:
-                    return "❗ Нет данных по запросу в Leak OSINT."
-            else:
-                return f"⚠ Ошибка API Leak OSINT: {response.status}"
+                    return [f"⚠ Ошибка API Leak OSINT: {response.status}"]
+        except Exception as e:
+            logger.error(f"Ошибка при запросе к API Leak OSINT: {e}")
+            return ["❗ Произошла ошибка при обращении к API."]
+
+
+def format_osint_results(results):
+    messages = []
+    chunk_size = 4000  
+    formatted_result = "\n".join([f"🔹 {key}: {value}" for key, value in results.items()])
+    
+    for i in range(0, len(formatted_result), chunk_size):
+        messages.append(formatted_result[i:i+chunk_size])
+    
+    return messages
+
 
 def is_phone_number(input_string):
     phone_pattern = re.compile(r"^\+?\d{7,15}$")
@@ -309,11 +324,14 @@ async def handle_search(search_term, message):
 
 
     leak_osint_result = await search_leak_osint(search_term)
-    if isinstance(leak_osint_result, dict):
-        result_text = "\n".join([f"{key}: {value}" for key, value in leak_osint_result.items()])
-        await message.reply(f"🧬 From Leak OSINT:\n{result_text}")
+
+    if isinstance(leak_osint_result, list):  
+        for chunk in leak_osint_result:
+            await message.reply(f"📡 From Leak OSINT:\n{chunk}")
     else:
-        await message.reply(leak_osint_result)
+        await message.reply("❗ Ошибка обработки данных из Leak OSINT.")
+
+
 
     if is_phone_number(search_term):
         phone_info = phoneinfo(search_term)
